@@ -1,0 +1,73 @@
+create or replace table "python_dataset" as
+(select "name1","name2","score" from "similar");
+create or replace table "unique_values_standard"
+as
+(select distinct "values_standard","DIST_SELLER" as orig_nameseller
+ from "standardised_names2");
+
+---converting name1 to original name and map with name2
+create or replace table "convert_name1" as
+(select distinct a."name1", b.orig_nameseller as "name_seller", a."name2", a."score"
+from "python_dataset" a
+join "unique_values_standard" b
+on a."name1"=b."values_standard");
+
+---create table with two original seller names //change
+create or replace table "comparison_sellers" as
+(
+select top 300000  y."name_seller" as "seller_name_1",  k.orig_nameseller as "seller_name_2" ,y."score"
+from "convert_name1" y
+join "unique_values_standard" k
+on replace(y."name2",' ','')=k."values_standard"
+where y."score">0.59);
+
+
+--changed
+create or replace table "comparison" as
+(
+select distinct top 10000000 a."seller_name_1",  b."car_hash" as "list_carhash1", a."seller_name_2", a."score"
+from "comparison_sellers" a
+join "autoscout_handler_name2" b
+on a."seller_name_1"=b."seller_name"
+);
+
+---Final table that consist of two seller_names, their stock quantity and their list of hashes
+
+
+create or replace table "unlisted" as
+(select  distinct
+a."seller_name_1",
+a."list_carhash1",
+a."seller_name_2",
+b."car_hash" as "list_carhash2",
+a."score"
+from "comparison" a
+inner join "autoscout_handler_name2" b
+on a."seller_name_2"=b."seller_name");
+
+
+---- needs one column for "percentage" to be added
+create or replace table "new_similarity" as
+(SELECT "seller_name_1","seller_name_2","list_carhash1","list_carhash2","score",
+ count(distinct "list_carhash1") over (partition by ("seller_name_1")) as "stock1",
+  count(distinct "list_carhash2") over (partition by ("seller_name_2")) as "stock2",
+  CASE WHEN "list_carhash1" = "list_carhash2"
+    THEN '1'
+    ELSE '0'
+  END
+  AS duplicate
+FROM "unlisted");
+
+select * from "new_similarity"
+
+--group by 1,2,3,4
+
+---duplicate and percentage
+create or replace table "percentage" as
+(select distinct "seller_name_1", "seller_name_2",round(("score"),1) as "Levenshtein",sum(duplicate) as  duplicates , count(distinct "list_carhash1") as stock1 , count(distinct "list_carhash2") as stock2,
+--round(((duplicates/stock1)*100),1) as "percent_of_first",
+--round(((duplicates/stock2)*100),1) as "percent_of_second"
+ least(round(((duplicates/stock1)*100),2),round(((duplicates/stock2)*100),2)) as average
+ from "new_similarity"
+ group by 1,2,3
+ having duplicates<>0);
