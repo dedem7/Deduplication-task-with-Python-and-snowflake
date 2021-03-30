@@ -1,1 +1,1 @@
-# Fuzzy-matching-in-Python-and-snowflake
+# Deduplication task with Python and snowflake
