@@ -1,0 +1,28 @@
+python distrib:
+import matplotlib.pyplot as plt
+import pandas as pd
+
+
+df = pd.read_csv('result5.csv')
+
+x=df.iloc[:,2].values
+y=df.iloc[:,6].values
+
+plt.hist(x, density=True)  # density=False would make counts
+plt.ylabel('Average_percentage')
+plt.xlabel('Levenshtein');
+
+
+gr =d.groupby('Levenshtein').mean()
+
+gr.plot.bar()
+plt.ylabel('Average percentage')
+plt.xlabel('Levenshtein score')
+
+d=df[['Levenshtein', 'AVERAGE']]
+d.corr(method='pearson')
+
+
+d2=gr.add_suffix('').reset_index()
+corelation=d2.corr(method='pearson')
+corelation.style.background_gradient(cmap='coolwarm')
