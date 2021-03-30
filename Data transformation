@@ -1,0 +1,32 @@
+create or replace table "autoscout_handler_name3" as
+(select
+distinct
+a."id",
+hash(a."marke",a."modelle",a."preis",a."ausenfarbe",a."antriebsart",a."sitzplatze",a."kraftstoff",a."kilometerstand") as "car_hash",
+a."marke",a."modelle",a."preis",a."ausenfarbe",a."antriebsart",a."sitzplatze",a."kraftstoff",a."kilometerstand",
+b."handler_name" as "seller_name",
+--a."landerversion",
+REGEXP_SUBSTR(a."handler_kontaktieren_stadt", '[0-9]+\\S+') AS "seller_zip",
+  CASE
+WHEN a."land"  = 'DE' THEN 'DE'
+WHEN a."land" = '' AND "handler_kontaktieren_telefon" ILIKE '%+49%' AND LENGTH("seller_zip") = 5 THEN 'DE'
+WHEN a."land" = '' AND "handler_kontaktieren_telefon" ILIKE '%+39%' AND LENGTH("seller_zip") = 5 THEN 'IT'
+WHEN a."land" = '' AND "handler_kontaktieren_telefon" ILIKE '%+34%' AND LENGTH("seller_zip") = 5 THEN 'ES'
+WHEN a."land" = '' AND "handler_kontaktieren_telefon" ILIKE '%+43%' AND LENGTH("seller_zip") = 4 THEN 'AT'
+WHEN a."land" = '' AND "handler_kontaktieren_telefon" ILIKE '%+352%' AND LENGTH("seller_zip") = 4 THEN 'LU'
+WHEN a."land" = '' AND "handler_kontaktieren_telefon" ILIKE '%+31%' AND (LENGTH("seller_zip") = 4 OR LENGTH("seller_zip") = 6) THEN 'NL'
+WHEN a."land" = '' AND "handler_kontaktieren_telefon" ILIKE '%+32%' AND LENGTH("seller_zip") = 4 THEN 'BE'
+WHEN a."land" = '' AND "handler_kontaktieren_telefon" ILIKE '%+33%' AND LENGTH("seller_zip") = 5 THEN 'BE'
+ELSE null
+END
+ as seller_country,
+ substr(a."url",13,11) as "source"
+from
+"autoscout24-full" a
+join "autoscout24-listing" b
+on a."id"=b."id"
+where
+a."verkaufer" = 'Händler'
+--and a."crawled_date" >= (CURRENT_DATE()-10)
+and a."crawled_date" >= (CURRENT_DATE()-10)
+and  seller_country='IT');
